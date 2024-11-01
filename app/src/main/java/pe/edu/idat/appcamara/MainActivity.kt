@@ -1,16 +1,21 @@
 package pe.edu.idat.appcamara
 
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import pe.edu.idat.appcamara.databinding.ActivityMainBinding
@@ -40,17 +45,32 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
     private fun tomarFoto() {
         if(validarPermiso()){
-            Toast.makeText(applicationContext,
-                "Puedo tomar foto", Toast.LENGTH_LONG).show()
+            ejecutarCamara()
         }else{
             solicitarPermiso()
         }
     }
-    private fun intentCamara(){
+    private fun ejecutarCamara(){
         val tomarFotoCamara = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if(tomarFotoCamara.resolveActivity(this.packageManager) != null){
-
+            val fotoArchivo = crearArchivoTemporal()
+            val fotoUri = obtenerContentUri(fotoArchivo)
+            tomarFotoCamara.putExtra(MediaStore.EXTRA_OUTPUT, fotoUri)
+            getResult.launch(tomarFotoCamara)
         }
+    }
+    private val getResult = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()){
+        if(it.resultCode == Activity.RESULT_OK){
+            mostrarFoto()
+        }
+    }
+
+    private fun mostrarFoto() {
+        val targetW: Int = binding.ivfoto.width
+        val targetH: Int = binding.ivfoto.height
+        val bmOptions = BitmapFactory.Options()
+
     }
 
     private fun crearArchivoTemporal(): File{
@@ -62,6 +82,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             nombreImagen, ".jpg", directorioImagenes)
         rutaFotoActual = archivoTempral.absolutePath
         return archivoTempral
+    }
+    private fun obtenerContentUri(archivo: File): Uri{
+        return FileProvider.getUriForFile(
+            applicationContext,
+            "pe.edu.idat.appcamara.fileprovider",
+            archivo)
     }
 
     private fun validarPermiso():Boolean{
